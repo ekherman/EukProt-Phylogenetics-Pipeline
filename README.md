@@ -1,9 +1,5 @@
 # EukProt Phylogenetics Pipeline
 
-**Author:** Emily Herman
-
-**Date:** 21 June 2021
-
 **Version:** 1.0
 
 ## Synopsis
