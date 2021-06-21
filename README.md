@@ -57,7 +57,7 @@ git clone https://github.com/ekherman/EukProt-Phylogenetics-Pipeline.git
 Edit the configuration file `config/eukprot_phylogenetics.config.yaml`.
 The following paths are required:
 
-1. Current working directory (default: `eukprot_phylogenetics`)
+1. Current working directory (default: `EukProt-Phylogenetics-Pipeline`)
 2. Directory containing EukProt BUSCO protein files. These must have the
 filename structure `{BUSCO ID}.{EukProt ID}.fasta`.
 3. Directory containing the BUSCO protein files from user data that will
