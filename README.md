@@ -6,6 +6,16 @@
 
 **Version:** 1.0
 
+## Synopsis
+
+This is a Snakemake workflow that takes BUSCO single copy orthologues
+from [EukProt taxa](https://figshare.com/articles/dataset/EukProt_a_database_of_genome-scale_predicted_proteins_across_the_diversity_of_eukaryotic_life/12417881)
+and from user-supplied eukaryote(s) of interest, and creates a concatenated
+supermatrix of all shared orthologues. This supermatrix can be used to
+phylogenetically place the organisms of interest in the eukaryotic tree.
+
+For more information about EukProt, see [EukProt: a database of genome-scale predicted proteins across the diversity of eukaryotic life](https://www.biorxiv.org/content/10.1101/2020.06.30.180687v1.full.pdf).
+
 ## Sections
 
 [Installation](#installation)
@@ -14,6 +24,7 @@
 
 [Running EukProt Phylogenetics Pipeline](#running-eukprot-phylogenetics-pipeline)
 
+[Output](#output)
 
 ## Installation
 
@@ -21,6 +32,7 @@ The following programs are required by the pipeline:
 - [Python 3.7+](https://www.python.org/downloads/)
     - [pandas](https://pypi.org/project/pandas/)
     - [cython](https://pypi.org/project/Cython/)
+- [Perl v5+](https://www.perl.org/)
 - [Snakemake 5.8+](https://snakemake.readthedocs.io/en/stable/)
 - [HMMer v.3+](http://hmmer.org/)
 - [ClipKIT](https://jlsteenwyk.com/ClipKIT/)
@@ -72,3 +84,19 @@ snakemake -s workflow/eukprot_phylogenetics.sm
 The current version of this pipeline does not submit jobs to a cluster.
 If memory usage is a concern, the pipeline can be run on an interactive
 computing node.
+
+## Output
+
+During processing, a number of intermediate files are created in `tmp/`
+directories within the input directories specified in the config file.
+
+In the output directory specified in the config file, the following files
+will be created
+
+ - `fasconcatg/[N]x[M].fas`: the final supermatrix with `N` species and
+`M` genes.
+- `fasconcatg/{gene_id}.fas`: the trimmed alignment for each gene,
+following character replacement
+
+All other files are intermediate files and may be removed after running
+the workflow to completion.
