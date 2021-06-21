@@ -1,0 +1,238 @@
+from os.path import join
+from os import listdir
+import pandas as pd
+
+configfile: "config/eukprot_phylogenetics.config.yaml"
+
+WORKING_DIR  = config["working_dir"]
+INPUT_DIR = config["input"]
+TMP = "tmp/"
+SAG_DIR = config["user"]
+TMP_USER = "tmp/"
+CONCAT_OUTPUT = config["output"]
+HMMS = config["hmms"]
+CLIPKIT = config["clipkit"]
+FASCONCATG = config["fasconcatg"]
+hmmalign = config["hmmalign"]
+
+
+def get_geneids(tmpdir):
+    files = os.listdir(tmpdir)
+    gene_list = []
+    for f in files:
+        f_list = f.split(".")
+        gene_list.append(f_list[0])
+    gene_list_small = list(set(gene_list))
+    return gene_list_small
+
+def get_combined_list(gids,uids):
+    combined = []
+    for id in gids:
+        if id in uids:
+            combined.append(id)
+        else:
+            pass
+    return combined
+
+def get_speciesids(inputdir, sagdir):
+    files = os.listdir(inputdir)
+    specieslist = []
+    for file in files:
+        if file.endswith(".fasta"):
+            m = file.split(".")
+            m2 = m[1].split("_")
+            match = m2[0]
+            if match.startswith("EDPD") or match.startswith("EP"):
+                specieslist.append(match)
+            else:
+                specieslist.append(match)
+                print("Warning: Unexpected EukProt IDs. IDs are expected to begin with"
+                      " EP or EDPD")
+        else:
+            pass
+    sag_files = os.listdir(sagdir)
+    sag_list = []
+    for file in sag_files:
+        if file.endswith(".fasta"):
+            m = file.split(".")
+            sag_list.append(m[1])
+    sag_small = list(set(sag_list))
+    sp_short = list(set(specieslist))
+    combo_species = sag_small + sp_short
+    return combo_species
+
+geneids = get_geneids(INPUT_DIR)
+gid_count = str(len(geneids))
+speciesids = get_speciesids(INPUT_DIR, SAG_DIR)
+sp_count = str(len(speciesids))
+
+userids = get_geneids(SAG_DIR)
+ep_user_set = get_combined_list(geneids, userids)
+ep_user_set_count = str(len(ep_user_set))
+
+rule final:
+        input:
+            INPUT_DIR + "rename_complete.txt",
+            expand(INPUT_DIR + TMP + "{geneids}.faa", geneids=geneids),
+            expand(INPUT_DIR + TMP + "{geneids}.faa2",geneids=geneids),
+            SAG_DIR + "rename_complete.txt",
+            expand(SAG_DIR + TMP_USER + "{ep_user_set}.faa2", ep_user_set=ep_user_set),
+            expand(CONCAT_OUTPUT + "{ep_user_set}.faa3", ep_user_set=ep_user_set),
+            expand(CONCAT_OUTPUT + "{ep_user_set}.hmmalign", ep_user_set=ep_user_set),
+            expand(CONCAT_OUTPUT + "{ep_user_set}.aln.faa", ep_user_set=ep_user_set),
+            expand(CONCAT_OUTPUT + "{ep_user_set}.clipkit", ep_user_set=ep_user_set),
+            CONCAT_OUTPUT + "fasconcatg/FcC_supermatrix.fas",
+            CONCAT_OUTPUT + "fasconcatg/workflow_complete.txt"
+
+
+rule reformat:
+    input:
+        INPUT_DIR
+    output:
+        INPUT_DIR + "rename_complete.txt"
+    shell:
+        """
+        rm -f {output}
+        ./scripts/rename_files.sh -i {input} -o {TMP}
+        """
+
+rule cat:
+    input:
+        rename = INPUT_DIR + "rename_complete.txt",
+    params:
+        ids = lambda wildcards: INPUT_DIR + TMP + wildcards.geneids
+    output:
+        INPUT_DIR + TMP + "{geneids}.faa",
+    shell:
+        """
+        cat {params.ids}*.fasta2 > {output}
+        """
+
+rule format_sequences:
+    input:
+        INPUT_DIR + TMP + "{geneids}.faa"
+    output:
+        INPUT_DIR + TMP + "{geneids}.faa2"
+    shell:
+        """
+        sed -e '/^>/s/>.*EDPD....._/>/g' {input} > {output}
+        """
+
+
+rule reformat_user_input:
+    input:
+        SAG_DIR
+    output:
+        SAG_DIR + "rename_complete.txt"
+    shell:
+        """
+        rm -f {output}
+        ./scripts/rename_files.sh -i {input} -o {TMP_USER}
+        """
+
+rule cat_user:
+    input:
+        rename = SAG_DIR + "rename_complete.txt"
+    params:
+        ids = lambda wildcards: SAG_DIR + TMP_USER + wildcards.ep_user_set,
+    output:
+        SAG_DIR + TMP_USER + "{ep_user_set}.faa",
+    shell:
+        """
+        cat {params.ids}*.fasta2 > {output}
+        """
+
+rule format_user_files_2:
+    input:
+        files = SAG_DIR + TMP_USER + "{ep_user_set}.faa",
+
+    params:
+        complete = SAG_DIR + "format_user_seqs.txt"
+    output:
+        files = SAG_DIR + TMP_USER + "{ep_user_set}.faa2",
+    shell:
+        """
+        sed -e '/^>/s/>.*\./>/g' {input.files} > {output.files}
+        touch {params.complete}
+        """
+
+rule cat_user_eukprot:
+    input:
+        user = SAG_DIR + TMP_USER + "{ep_user_set}.faa2",
+        eukprot = INPUT_DIR + TMP + "{ep_user_set}.faa2"
+    output:
+        CONCAT_OUTPUT + "{ep_user_set}.faa3"
+    shell:
+        """
+        cat {input.user} {input.eukprot} > {output}
+        """
+
+
+rule hmm_align_concat:
+    input:
+        CONCAT_OUTPUT + "{ep_user_set}.faa3"
+    params:
+        hmm = lambda wildcards: HMMS + wildcards.ep_user_set + ".hmm"
+    output:
+        align = CONCAT_OUTPUT + "{ep_user_set}.hmmalign",
+        aln_fmt = CONCAT_OUTPUT + "{ep_user_set}.aln.faa"
+    shell:
+        """
+        rm -f {output.align}
+        rm -f {output.aln_fmt}
+        module load hmmer
+        {hmmalign} --trim --informat FASTA --outformat Stockholm -o {output.align} \
+        {params.hmm} {input}
+        esl-reformat -o {output.align}.tmp.faa --informat stockholm afa {output.align}
+        sed -e '/^>/! s/\./-/g' {output.align}.tmp.faa > {output.aln_fmt}
+        rm -f {output.align}.tmp.faa
+        """
+rule clipkit_concat:
+    input:
+        aln_fmt = CONCAT_OUTPUT + "{ep_user_set}.aln.faa"
+    output:
+        CONCAT_OUTPUT + "{ep_user_set}.clipkit"
+    shell:
+        """
+        source {CLIPKIT}/bin/activate
+        clipkit {input} -m gappy -o {output}
+        deactivate
+        """
+rule char_replacement:
+    input:
+        CONCAT_OUTPUT + "{ep_user_set}.clipkit"
+    output:
+        CONCAT_OUTPUT + "fasconcatg/{ep_user_set}.fas"
+    shell:
+        """
+        sed -i '/^>/! y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' {input}
+        sed '/^>/! s/Z/-/' {input} > {output}
+        """
+rule FASconCATG:
+    input:
+        expand(CONCAT_OUTPUT + "fasconcatg/{ep_user_set}.fas", ep_user_set=ep_user_set)
+    params:
+        dir = CONCAT_OUTPUT + "fasconcatg",
+        cmd = "perl " + FASCONCATG + " -s -l"
+    output:
+        CONCAT_OUTPUT + "fasconcatg/FcC_supermatrix.fas"
+    shell:
+        """
+        (
+        cd {params.dir}
+        {params.cmd}
+        )
+        """
+
+rule convert_rename:
+    input:
+        CONCAT_OUTPUT + "fasconcatg/FcC_supermatrix.fas"
+    params:
+        out = CONCAT_OUTPUT + sp_count + "x" + ep_user_set_count + ".fas"
+    output:
+        CONCAT_OUTPUT + "fasconcatg/workflow_complete.txt"
+    shell:
+        """
+        sed -e '/^>/! s/X/-/g' {input} > {params.out}
+        touch {output}
+        """

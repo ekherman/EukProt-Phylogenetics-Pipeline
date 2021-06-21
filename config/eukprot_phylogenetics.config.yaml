@@ -1,0 +1,18 @@
+# Path to EP Phylogenetics workflow directory
+working_dir: "~/EukProt-Phylogenetics-Pipeline/"
+# Path to EukProt BUSCO files
+input: "~/path/to/EukProt/input/files/"
+# Path to fasta files containing BUSCO proteins for the user-supplied assemblies
+user: "~/path/to/user/input/files/"
+# Path to output files
+output: "~/results/"
+
+## Program paths
+# Path to folder containing BUSCO HMMs
+hmms: "/path/to/lineages/eukaryota_odb10/hmms/"
+# Path to hmmalign, if not in the user PATH
+hmmalign: hmmalign
+# Path to ClipKIT virtual environment
+clipkit: "/path/to/clipkit/venv/"
+# Path to FASconCAT-G perl script
+fasconcatg: "/path/to/FASconCAT-G/FASconCAT-G_v1.05.pl"
