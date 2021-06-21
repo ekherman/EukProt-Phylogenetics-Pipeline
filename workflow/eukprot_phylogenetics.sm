@@ -228,7 +228,8 @@ rule convert_rename:
     input:
         CONCAT_OUTPUT + "fasconcatg/FcC_supermatrix.fas"
     params:
-        out = CONCAT_OUTPUT + sp_count + "x" + ep_user_set_count + ".fas"
+        out = CONCAT_OUTPUT + "fasconcatg/" + sp_count + "x" + ep_user_set_count + ".fas"
+
     output:
         CONCAT_OUTPUT + "fasconcatg/workflow_complete.txt"
     shell:
