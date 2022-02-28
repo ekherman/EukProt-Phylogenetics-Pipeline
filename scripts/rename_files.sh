@@ -30,7 +30,7 @@ done
 
 for i in *.fasta2
 do
-  sed -i '/^>/s/\.fasta//g' "$i"
+  sed -i '' '/^>/s/\.fasta//g' "$i"
 done
 
 mkdir -p "$outdir"
