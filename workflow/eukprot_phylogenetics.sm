@@ -205,7 +205,7 @@ rule char_replacement:
         CONCAT_OUTPUT + "fasconcatg/{ep_user_set}.fas"
     shell:
         """
-        sed -i '/^>/! y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' {input}
+        sed -i '' '/^>/! y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/' {input}
         sed '/^>/! s/Z/-/' {input} > {output}
         """
 rule FASconCATG:
